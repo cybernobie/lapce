@@ -14,8 +14,6 @@ use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use serde::Deserialize;
 
-use crate::workspace::{LapceWorkspace, LapceWorkspaceType};
-
 use self::{
     color::LapceColor,
     color_theme::{ColorThemeConfig, ThemeColor, ThemeColorPreference},
@@ -27,6 +25,7 @@ use self::{
     terminal::TerminalConfig,
     ui::UIConfig,
 };
+use crate::workspace::{LapceWorkspace, LapceWorkspaceType};
 
 pub mod color;
 pub mod color_theme;
@@ -771,6 +770,22 @@ impl LapceConfig {
                     .position(|s| s == &self.icon_theme.name)
                     .unwrap_or(0),
                 items: self.icon_theme_list.clone(),
+            }),
+            ("terminal", "profiles") => Some(DropdownInfo {
+                active_index: self
+                    .terminal
+                    .profiles
+                    .iter()
+                    .position(|(profile_name, _)| {
+                        profile_name
+                            == self
+                                .terminal
+                                .default_profile
+                                .get(&std::env::consts::OS.to_string())
+                                .unwrap_or(&String::from("default"))
+                    })
+                    .unwrap_or(0),
+                items: self.terminal.profiles.clone().into_keys().collect(),
             }),
             _ => None,
         }

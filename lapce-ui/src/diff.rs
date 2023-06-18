@@ -1,4 +1,5 @@
-use crate::tab::LapceIcon;
+use std::ops::Range;
+
 use druid::{
     piet::{Text, TextLayoutBuilder},
     BoxConstraints, Command, Env, Event, EventCtx, LayoutCtx, LifeCycle,
@@ -12,10 +13,10 @@ use lapce_core::{
 use lapce_data::{
     command::{CommandKind, LapceCommand, LAPCE_COMMAND},
     config::{LapceIcons, LapceTheme},
-    data::EditorView,
-    data::LapceTabData,
+    data::{EditorView, LapceTabData},
 };
-use std::ops::Range;
+
+use crate::tab::LapceIcon;
 
 // Diff tool box
 pub struct DiffBox {

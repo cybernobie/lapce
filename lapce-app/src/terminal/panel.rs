@@ -13,6 +13,7 @@ use lapce_rpc::{
     terminal::TermId,
 };
 
+use super::{data::TerminalData, tab::TerminalTabData};
 use crate::{
     debug::{DapData, RunDebugData, RunDebugMode, RunDebugProcess},
     id::TerminalTabId,
@@ -21,8 +22,6 @@ use crate::{
     window_tab::{CommonData, Focus},
     workspace::LapceWorkspace,
 };
-
-use super::{data::TerminalData, tab::TerminalTabData};
 
 pub struct TerminalTabInfo {
     pub active: usize,
@@ -36,6 +35,7 @@ pub struct TerminalPanelData {
     pub tab_info: RwSignal<TerminalTabInfo>,
     pub debug: RunDebugData,
     pub common: CommonData,
+    // pub profiles: TerminalProfilesListData,
 }
 
 impl TerminalPanelData {
@@ -56,12 +56,16 @@ impl TerminalPanelData {
 
         let debug = RunDebugData::new(cx);
 
+        // let profiles =
+        //     TerminalProfilesListData::new(Arc::new(config.to_owned()), widget_id);
+
         Self {
             cx,
             workspace,
             tab_info,
             debug,
             common,
+            // profiles,
         }
     }
 

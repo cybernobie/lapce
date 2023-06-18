@@ -1,5 +1,4 @@
-use std::sync::Arc;
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use druid::{
     kurbo::{Circle, Line},
@@ -25,10 +24,9 @@ use lapce_data::{
 };
 use lapce_xi_rope::Rope;
 
-use crate::editor::view::LapceEditorView;
 #[cfg(not(target_os = "macos"))]
 use crate::window::window_controls;
-use crate::{list::List, palette::Palette};
+use crate::{editor::view::LapceEditorView, list::List, palette::Palette};
 
 const TITLE_HEIGHT: f64 = 36.0;
 
@@ -1082,6 +1080,7 @@ pub struct SourceControlBranches {
     last_idle_timer: TimerToken,
     branches: im::Vector<String>,
 }
+
 impl SourceControlBranches {
     fn new(data: &LapceTabData) -> Self {
         let widget_id = WidgetId::next();
@@ -1112,6 +1111,7 @@ impl SourceControlBranches {
         data.focus = Arc::new(self.widget_id);
     }
 }
+
 impl Widget<LapceTabData> for SourceControlBranches {
     fn id(&self) -> Option<WidgetId> {
         Some(self.widget_id)

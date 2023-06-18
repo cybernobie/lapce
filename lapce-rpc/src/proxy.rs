@@ -7,7 +7,6 @@ use std::{
     },
 };
 
-use super::plugin::VoltID;
 use crossbeam_channel::{Receiver, Sender};
 use indexmap::IndexMap;
 use lapce_xi_rope::RopeDelta;
@@ -20,6 +19,7 @@ use lsp_types::{
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 
+use super::plugin::VoltID;
 use crate::{
     buffer::BufferId,
     dap_types::{DapId, RunDebugConfig, SourceBreakpoint, ThreadId},
@@ -27,7 +27,7 @@ use crate::{
     plugin::{PluginId, VoltInfo, VoltMetadata},
     source_control::FileDiff,
     style::SemanticStyles,
-    terminal::TermId,
+    terminal::{TermId, TerminalProfile},
     RequestId, RpcError, RpcMessage,
 };
 
@@ -205,9 +205,7 @@ pub enum ProxyNotification {
     },
     NewTerminal {
         term_id: TermId,
-        cwd: Option<PathBuf>,
-        env: Option<HashMap<String, String>>,
-        shell: String,
+        profile: TerminalProfile,
     },
     InstallVolt {
         volt: VoltInfo,
@@ -560,19 +558,8 @@ impl ProxyRpcHandler {
         });
     }
 
-    pub fn new_terminal(
-        &self,
-        term_id: TermId,
-        cwd: Option<PathBuf>,
-        env: Option<HashMap<String, String>>,
-        shell: String,
-    ) {
-        self.notification(ProxyNotification::NewTerminal {
-            term_id,
-            cwd,
-            env,
-            shell,
-        })
+    pub fn new_terminal(&self, term_id: TermId, profile: TerminalProfile) {
+        self.notification(ProxyNotification::NewTerminal { term_id, profile })
     }
 
     pub fn terminal_close(&self, term_id: TermId) {

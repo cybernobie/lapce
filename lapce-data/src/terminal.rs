@@ -12,7 +12,7 @@ use alacritty_terminal::{
 };
 use druid::{
     keyboard_types::Key, Color, Command, Env, EventCtx, ExtEventSink, KeyEvent,
-    Modifiers, Target, WidgetId,
+    Modifiers, Point, Target, WidgetId,
 };
 use hashbrown::HashMap;
 use lapce_core::{
@@ -28,13 +28,14 @@ use crate::{
     command::{
         CommandExecuted, CommandKind, LapceCommand, LapceUICommand, LAPCE_UI_COMMAND,
     },
-    config::{LapceConfig, LapceTheme},
+    config::{LapceConfig, LapceTheme, TerminalProfile},
     data::LapceWorkspace,
     db::WorkspaceInfo,
     debug::{RunDebugData, RunDebugMode, RunDebugProcess},
     document::SystemClipboard,
     find::Find,
     keypress::KeyPressFocus,
+    list::ListData,
     proxy::LapceProxy,
     split::SplitMoveDirection,
 };
@@ -50,6 +51,7 @@ pub struct TerminalPanelData {
     pub debug: Arc<RunDebugData>,
     pub proxy: Arc<LapceProxy>,
     pub event_sink: ExtEventSink,
+    // pub profiles: TerminalProfilesListData,
 }
 
 impl TerminalPanelData {
@@ -73,7 +75,7 @@ impl TerminalPanelData {
         tabs.insert(split.split_id, split);
         let debug = Arc::new(RunDebugData::new(workspace_info));
         Self {
-            widget_id: WidgetId::next(),
+            widget_id,
             tabs,
             tabs_order,
             active: 0,
@@ -816,6 +818,7 @@ pub struct LapceTerminalData {
     workspace: Arc<LapceWorkspace>,
     event_sink: ExtEventSink,
     size: Rc<RefCell<(usize, usize)>>,
+    pub profiles: TerminalProfilesListData,
 }
 
 impl LapceTerminalData {
@@ -830,6 +833,26 @@ impl LapceTerminalData {
         let widget_id = WidgetId::next();
         let view_id = WidgetId::next();
         let term_id = TermId::next();
+
+        let default_profile = if let Some(profile) = config
+            .terminal
+            .default_profile
+            .get(&std::env::consts::OS.to_string())
+        {
+            profile.clone()
+        } else {
+            String::from("default")
+        };
+        let profile = if let Some(term_profile) =
+            config.terminal.profiles.get(&default_profile)
+        {
+            term_profile.clone()
+        } else {
+            TerminalProfile {
+                command: None,
+                arguments: None,
+            }
+        };
 
         let raw = Self::new_raw_terminal(
             &workspace,
@@ -1177,6 +1200,8 @@ impl LapceTerminalData {
             Key::End => term_sequence!([all], key, "\x1bOF", "\x1b[1;", "F"),
             Key::Insert => term_sequence!([all], key, "\x1b[2~", "\x1b[2;", "~"),
             Key::Delete => term_sequence!([all], key, "\x1b[3~", "\x1b[3;", "~"),
+            Key::PageUp => term_sequence!([all], key, "\x1b[5~", "\x1b[5;", "~"),
+            Key::PageDown => term_sequence!([all], key, "\x1b[6~", "\x1b[6;", "~"),
             _ => None,
         }
     }
@@ -1215,6 +1240,57 @@ impl EventListener for EventProxy {
             }
             _ => (),
         }
+    }
+}
+
+#[derive(Clone)]
+pub struct TerminalProfilesListData {
+    pub filter_editor: WidgetId,
+    pub list: ListData<String, ()>,
+    pub active: bool,
+    /// The origin the list should appear at, this is updated whenever the
+    /// branch list is opened in the titlebar
+    pub origin: Point,
+}
+
+impl TerminalProfilesListData {
+    fn new(config: Arc<LapceConfig>, parent: WidgetId) -> Self {
+        let list = ListData::new(config, parent, ());
+        TerminalProfilesListData {
+            filter_editor: WidgetId::next(),
+            list,
+            active: false,
+            origin: Point::ZERO,
+        }
+    }
+}
+
+impl KeyPressFocus for TerminalProfilesListData {
+    fn get_mode(&self) -> Mode {
+        Mode::Insert
+    }
+
+    fn check_condition(&self, condition: &str) -> bool {
+        matches!(condition, "list_focus" | "modal_focus")
+    }
+
+    fn run_command(
+        &mut self,
+        ctx: &mut EventCtx,
+        command: &LapceCommand,
+        _count: Option<usize>,
+        _mods: druid::Modifiers,
+        _env: &Env,
+    ) -> CommandExecuted {
+        if let CommandKind::Focus(FocusCommand::ModalClose) = command.kind {
+            self.active = false;
+            return CommandExecuted::Yes;
+        }
+        self.list.run_command(ctx, command)
+    }
+
+    fn receive_char(&mut self, _ctx: &mut EventCtx, _c: &str) {
+        // Currently, this does not have any sort of input (such as for filtering)
     }
 }
 

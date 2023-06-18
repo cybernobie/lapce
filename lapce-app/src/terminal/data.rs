@@ -17,9 +17,16 @@ use lapce_core::{
     movement::{LinePosition, Movement},
     register::Clipboard,
 };
-use lapce_rpc::{dap_types::RunDebugConfig, terminal::TermId};
+use lapce_rpc::{
+    dap_types::RunDebugConfig,
+    terminal::{TermId, TerminalProfile},
+};
 use parking_lot::RwLock;
 
+use super::{
+    event::TermEvent,
+    raw::{EventProxy, RawTerminal},
+};
 use crate::{
     command::{CommandExecuted, CommandKind, InternalCommand},
     debug::RunDebugProcess,
@@ -27,11 +34,6 @@ use crate::{
     keypress::{condition::Condition, KeyPressFocus},
     window_tab::CommonData,
     workspace::LapceWorkspace,
-};
-
-use super::{
-    event::TermEvent,
-    raw::{EventProxy, RawTerminal},
 };
 
 #[derive(Clone)]
@@ -45,6 +47,7 @@ pub struct TerminalData {
     pub raw: RwSignal<Arc<RwLock<RawTerminal>>>,
     pub run_debug: RwSignal<Option<RunDebugProcess>>,
     pub common: CommonData,
+    // pub profiles: RwSignal<TerminalProfilesListData>,
 }
 
 impl KeyPressFocus for TerminalData {
@@ -305,7 +308,40 @@ impl TerminalData {
         let (cx, _) = cx.run_child_scope(|cx| cx);
         let term_id = TermId::next();
 
-        let title = create_rw_signal(cx, "title".to_string());
+        // let profiles = create_rw_signal(
+        //     cx,
+        //     TerminalProfilesListData::new(Arc::new(config.to_owned()), widget_id),
+        // );
+        let default_profile = if let Some(profile) = common
+            .config
+            .get_untracked()
+            .terminal
+            .default_profile
+            .get(&std::env::consts::OS.to_string())
+        {
+            profile.clone()
+        } else {
+            String::from("default")
+        };
+        // let profile = if let Some(term_profile) = common
+        //     .config
+        //     .get_untracked()
+        //     .terminal
+        //     .profiles
+        //     .get(&default_profile)
+        // {
+        //     TerminalProfile {
+        //         command: term_profile.command.clone(),
+        //         arguments: term_profile.arguments.clone(),
+        //     }
+        // } else {
+        //     TerminalProfile {
+        //         command: None,
+        //         arguments: None,
+        //     }
+        // };
+
+        let title = create_rw_signal(cx, default_profile);
 
         let raw = Self::new_raw_terminal(
             workspace.clone(),
@@ -329,6 +365,7 @@ impl TerminalData {
             mode,
             visual_mode,
             common,
+            // profiles,
         }
     }
 
@@ -344,39 +381,68 @@ impl TerminalData {
             common.term_notification_tx.clone(),
         )));
 
-        let mut cwd = workspace.path.as_ref().cloned();
-        let mut env = None;
-        let shell = if let Some(run_debug) = run_debug {
+        let workdir = if let Ok(path) = url::Url::from_file_path(
+            workspace.path.as_ref().cloned().unwrap_or_default(),
+        ) {
+            Some(path)
+        } else {
+            None
+        };
+
+        let mut profile = TerminalProfile {
+            workdir,
+            ..Default::default()
+        };
+
+        if let Some(run_debug) = run_debug {
             if let Some(path) = run_debug.cwd.as_ref() {
-                cwd = Some(PathBuf::from(path));
+                if let Ok(as_url) = url::Url::from_file_path(PathBuf::from(path)) {
+                    profile.workdir = Some(as_url);
+                }
                 if path.contains("${workspace}") {
                     if let Some(workspace) = workspace
                         .path
                         .as_ref()
                         .and_then(|workspace| workspace.to_str())
                     {
-                        cwd = Some(PathBuf::from(
+                        if let Ok(as_url) = url::Url::from_file_path(PathBuf::from(
                             &path.replace("${workspace}", workspace),
-                        ));
+                        )) {
+                            profile.workdir = Some(as_url);
+                        }
                     }
                 }
             }
 
-            env = run_debug.env.clone();
+            profile.environment = run_debug.env.clone();
 
             if let Some(debug_command) = run_debug.debug_command.as_ref() {
-                debug_command.clone()
+                profile.command = Some(debug_command.clone());
             } else {
-                format!("{} {}", run_debug.program, run_debug.args.join(" "))
+                profile.command = Some(run_debug.program.clone());
+                profile.arguments = Some(run_debug.args.clone());
             }
         } else {
-            common.config.get_untracked().terminal.shell.clone()
+            if let Some(term_profile) =
+                common.config.get_untracked().terminal.profiles.get(
+                    common
+                        .config
+                        .get_untracked()
+                        .terminal
+                        .default_profile
+                        .get(&std::env::consts::OS.to_string())
+                        .unwrap_or(&String::from("default")),
+                )
+            {
+                profile.command = term_profile.command.clone();
+                profile.arguments = term_profile.arguments.clone();
+            }
         };
 
         {
             let raw = raw.clone();
             let _ = common.term_tx.send((term_id, TermEvent::NewTerminal(raw)));
-            common.proxy.new_terminal(term_id, cwd, env, shell);
+            common.proxy.new_terminal(term_id, profile);
         }
         raw
     }
@@ -547,6 +613,8 @@ impl TerminalData {
             Key::End => term_sequence!([all], key, "\x1bOF", "\x1b[1;", "F"),
             Key::Insert => term_sequence!([all], key, "\x1b[2~", "\x1b[2;", "~"),
             Key::Delete => term_sequence!([all], key, "\x1b[3~", "\x1b[3;", "~"),
+            Key::PageUp => term_sequence!([all], key, "\x1b[5~", "\x1b[5;", "~"),
+            Key::PageDown => term_sequence!([all], key, "\x1b[6~", "\x1b[6;", "~"),
             _ => None,
         }
     }

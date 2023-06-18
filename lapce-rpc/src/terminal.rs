@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 use crate::counter::Counter;
@@ -11,3 +13,13 @@ impl TermId {
         Self(TERMINAL_ID_COUNTER.next())
     }
 }
+
+#[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize, Default)]
+pub struct TerminalProfile {
+    pub command: Option<String>,
+    pub arguments: Option<Vec<String>>,
+    pub workdir: Option<url::Url>,
+    pub environment: Option<HashMap<String, String>>,
+}
+
+impl TerminalProfile {}
