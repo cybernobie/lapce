@@ -29,6 +29,7 @@ use lapce_core::{
 use lapce_rpc::proxy::ProxyResponse;
 use lapce_xi_rope::Rope;
 use lsp_types::DocumentSymbolResponse;
+use tracing::debug;
 
 use self::{
     item::{PaletteItem, PaletteItemContent},

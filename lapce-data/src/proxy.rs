@@ -19,7 +19,7 @@ use lapce_proxy::dispatch::Dispatcher;
 use lapce_rpc::{
     core::{CoreHandler, CoreNotification, CoreRequest, CoreRpcHandler},
     plugin::VoltID,
-    proxy::{ProxyRpc, ProxyRpcHandler},
+    proxy::{ProxyRpc, ProxyRpcHandler, ProxyStatus},
     stdio::stdio_transport,
     terminal::TermId,
     RequestId, RpcMessage,
@@ -43,13 +43,6 @@ pub enum TermEvent {
     NewTerminal(Arc<Mutex<RawTerminal>>),
     UpdateContent(Vec<u8>),
     CloseTerminal,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum ProxyStatus {
-    Connecting,
-    Connected,
-    Disconnected,
 }
 
 #[derive(Error, Debug)]
@@ -107,13 +100,6 @@ impl CoreHandler for LapceProxy {
         use CoreNotification::*;
         match rpc {
             OpenPaths { .. } => {}
-            ProxyConnected {} => {
-                let _ = self.event_sink.submit_command(
-                    LAPCE_UI_COMMAND,
-                    LapceUICommand::ProxyUpdateStatus(ProxyStatus::Connected),
-                    Target::Widget(self.tab_id),
-                );
-            }
             OpenFileChanged { path, content } => {
                 let _ = self.event_sink.submit_command(
                     LAPCE_UI_COMMAND,
@@ -325,6 +311,7 @@ impl CoreHandler for LapceProxy {
                     Target::Widget(self.tab_id),
                 );
             }
+            _ => {}
         }
     }
 
