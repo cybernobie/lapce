@@ -522,7 +522,10 @@ impl LapceConfig {
         });
 
         svg.unwrap_or_else(|| {
-            let name = self.default_icon_theme.ui.get(icon).unwrap();
+            let name = match self.default_icon_theme.ui.get(icon) {
+                Some(name) => name,
+                None => panic!("Failed to obtain icon: {icon}"),
+            };
             self.svg_store.write().get_default_svg(name)
         })
     }
