@@ -65,7 +65,8 @@ pub fn status(
 
     let mode = create_memo(cx.scope, move |_| window_tab_data.mode());
 
-    stack(|| {
+    stack(move || {
+        let editor = move || editor.clone().get();
         (
             stack(|| {
                 (
@@ -305,7 +306,7 @@ pub fn status(
             stack(|| {
                 let palette_clone = palette.clone();
                 let cursor_info = label(move || {
-                    if let Some(editor) = editor.get() {
+                    if let Some(editor) = editor() {
                         let mut status = String::new();
                         let cursor = editor.get().cursor.get();
                         if let Some((line, column, character)) = cursor
@@ -331,14 +332,24 @@ pub fn status(
                         }
                         return status;
                     }
-                    String::from("No document")
+                    String::new()
                 })
                 .on_click(move |_| {
                     palette_clone.run(cx.scope, PaletteKind::Line);
                     true
                 })
-                .style(|| {
+                .style(move || {
                     Style::BASE
+                        .display(
+                            if editor()
+                                .map(|f| f.get().view.doc.get().content.is_file())
+                                .unwrap_or(false)
+                            {
+                                Display::Flex
+                            } else {
+                                Display::None
+                            },
+                        )
                         .height_pct(100.0)
                         .padding_horiz_px(10.0)
                         .items_center()
@@ -352,19 +363,29 @@ pub fn status(
                 });
                 let palette_clone = palette.clone();
                 let language_info = label(move || {
-                    if let Some(editor) = editor.get() {
+                    if let Some(editor) = editor() {
                         let doc = editor.with(|editor| editor.view.doc);
                         doc.with(|doc| doc.syntax().language.to_string())
                     } else {
-                        "Plain Text".to_string() // FIXME: remove
+                        String::new()
                     }
                 })
                 .on_click(move |_| {
                     palette_clone.run(cx.scope, PaletteKind::Language);
                     true
                 })
-                .style(|| {
+                .style(move || {
                     Style::BASE
+                        .display(
+                            if editor()
+                                .map(|f| f.get().view.doc.get().content.is_file())
+                                .unwrap_or(false)
+                            {
+                                Display::Flex
+                            } else {
+                                Display::None
+                            },
+                        )
                         .height_pct(100.0)
                         .padding_horiz_px(10.0)
                         .items_center()
