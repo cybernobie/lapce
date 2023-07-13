@@ -13,6 +13,7 @@ pub enum PaletteKind {
     IconTheme,
     Language,
     SCMReferences,
+    FilePicker,
 }
 
 impl PaletteKind {
@@ -32,7 +33,8 @@ impl PaletteKind {
             | PaletteKind::ColorTheme
             | PaletteKind::IconTheme
             | PaletteKind::Language
-            | PaletteKind::SCMReferences => "",
+            | PaletteKind::SCMReferences
+            | PaletteKind::FilePicker => "",
         }
     }
 
@@ -68,7 +70,8 @@ impl PaletteKind {
             | PaletteKind::ColorTheme
             | PaletteKind::IconTheme
             | PaletteKind::Language
-            | PaletteKind::SCMReferences => input,
+            | PaletteKind::SCMReferences
+            | PaletteKind::FilePicker => input,
             PaletteKind::Command
             | PaletteKind::Workspace
             | PaletteKind::DocumentSymbol

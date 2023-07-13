@@ -378,6 +378,9 @@ impl PaletteData {
             PaletteKind::SCMReferences => {
                 self.get_scm_references(cx);
             }
+            PaletteKind::FilePicker => {
+                self.get_picker_items(cx);
+            }
         }
     }
 
@@ -835,6 +838,54 @@ impl PaletteData {
         self.items.set(items);
     }
 
+    fn get_picker_items(&self, _cx: Scope) {
+        let workspace = self.workspace.clone();
+        let _set_items = self.items.write_only();
+        let _input = self.input.get_untracked().input;
+        let set_items = self.items.write_only();
+        let send = create_ext_action(self.common.scope, move |result| {
+            if let Ok(ProxyResponse::ReadDirResponse { items }) = result {
+                let items: im::Vector<PaletteItem> = items
+                    .iter()
+                    .map(|item| {
+                        debug!("{:?}", item);
+                        let path = item.path_buf.clone();
+                        let full_path = path.clone();
+                        // Strip the workspace prefix off the path, to avoid clutter
+                        let path =
+                            if let Some(workspace_path) = workspace.path.as_ref() {
+                                path.strip_prefix(workspace_path)
+                                    .unwrap_or(&full_path)
+                                    .to_path_buf()
+                            } else {
+                                path
+                            };
+                        let filter_text = path.to_str().unwrap_or("").to_string();
+
+                        PaletteItem {
+                            content: PaletteItemContent::File { path, full_path },
+                            filter_text,
+                            score: 0,
+                            indices: Vec::new(),
+                        }
+                    })
+                    .collect();
+                set_items.set(items);
+            } else {
+                set_items.update(|items| items.clear());
+            }
+        });
+
+        self.common.proxy.read_dir(
+            self.workspace.path.clone().unwrap_or(
+                lapce_core::directory::Directory::home_dir().unwrap_or_default(),
+            ),
+            move |result| {
+                send(result);
+            },
+        );
+    }
+
     fn preselect_matching(&self, matching: &str) {
         let Some((idx, _)) = self.items.get_untracked().iter().find_position(|item| item.filter_text == matching) else { return };
 
@@ -1000,6 +1051,16 @@ impl PaletteData {
                         data: Some(serde_json::json!(name.to_owned())),
                     });
                 }
+                PaletteItemContent::PathPickerItem { path, .. } => self
+                    .common
+                    .window_command
+                    .send(WindowCommand::SetWorkspace {
+                        workspace: LapceWorkspace {
+                            kind: self.workspace.kind.clone(),
+                            path: Some(path.to_owned()),
+                            last_open: 0,
+                        },
+                    }),
             }
         } else if self.kind.get_untracked() == PaletteKind::SshHost {
             let input = self.input.with_untracked(|input| input.input.clone());
@@ -1132,6 +1193,7 @@ impl PaletteData {
                         save: false,
                     }),
                 PaletteItemContent::SCMReference { .. } => {}
+                PaletteItemContent::PathPickerItem { .. } => {}
             }
         }
     }

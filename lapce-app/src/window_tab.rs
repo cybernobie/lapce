@@ -472,6 +472,8 @@ impl WindowTabData {
                             }
                         },
                     );
+                } else {
+                    self.palette.run(cx, PaletteKind::FilePicker);
                 }
             }
             CloseFolder => {

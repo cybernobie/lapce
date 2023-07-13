@@ -69,4 +69,9 @@ pub enum PaletteItemContent {
     SCMReference {
         name: String,
     },
+    PathPickerItem {
+        path: PathBuf,
+        name: String,
+        directory: bool,
+    },
 }

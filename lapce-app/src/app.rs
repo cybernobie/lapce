@@ -1138,7 +1138,8 @@ fn palette_item(
 ) -> impl View {
     match &item.content {
         PaletteItemContent::File { path, .. }
-        | PaletteItemContent::Reference { path, .. } => {
+        | PaletteItemContent::Reference { path, .. }
+        | PaletteItemContent::PathPickerItem { path, .. } => {
             let file_name = path
                 .file_name()
                 .and_then(|s| s.to_str())
