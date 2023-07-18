@@ -56,25 +56,25 @@ pub struct Buffer {
 }
 
 impl Buffer {
-    pub fn new(id: BufferId, path: PathBuf) -> BufferType {
-        return match load_file(&path) {
-            Ok(content) => {
-                let rope = Rope::from(content);
-                let rev = u64::from(!rope.is_empty());
-                let language_id = language_id_from_path(&path).unwrap_or("");
-                let mod_time = get_mod_time(&path);
-                BufferType::Text(Buffer {
-                    id,
-                    rope,
-                    path,
-                    language_id,
-                    rev,
-                    mod_time,
-                })
-            }
-            Err(e) => BufferType::Error(e.to_string()),
-        };
-    }
+    // pub fn new(id: BufferId, path: PathBuf) -> BufferType {
+    //     return match load_file(&path) {
+    //         Ok(content) => {
+    //             let rope = Rope::from(content);
+    //             let rev = u64::from(!rope.is_empty());
+    //             let language_id = language_id_from_path(&path).unwrap_or("");
+    //             let mod_time = get_mod_time(&path);
+    //             BufferType::Text(Buffer {
+    //                 id,
+    //                 rope,
+    //                 path,
+    //                 language_id,
+    //                 rev,
+    //                 mod_time,
+    //             })
+    //         }
+    //         Err(e) => BufferType::Error(e.to_string()),
+    //     };
+    // }
 
     pub fn save(&mut self, rev: u64) -> Result<()> {
         if self.rev != rev {

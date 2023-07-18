@@ -108,14 +108,12 @@ impl ProxyHandler for Dispatcher {
                     .notification(CoreNotification::OpenPaths { paths });
             }
             OpenFileChanged { path } => {
-                if let Some(buffer) = self.buffers.get(&path) {
-                    if let BufferType::Text(buffer) = buffer {
-                        if get_mod_time(&buffer.path) == buffer.mod_time {
-                            return;
-                        }
-                        if let Ok(content) = load_file(&buffer.path) {
-                            self.core_rpc.open_file_changed(path, content);
-                        }
+                if let Some(BufferType::Text(buffer)) = self.buffers.get(&path) {
+                    if get_mod_time(&buffer.path) == buffer.mod_time {
+                        return;
+                    }
+                    if let Ok(content) = load_file(&buffer.path) {
+                        self.core_rpc.open_file_changed(path, content);
                     }
                 }
             }
